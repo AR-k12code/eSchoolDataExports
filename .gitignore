@@ -1,0 +1,5 @@
+data\*.csv
+*.csv
+settings.ps1
+notes.txt
+!/info/*
