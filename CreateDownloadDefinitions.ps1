@@ -1,16 +1,26 @@
 <#
-eSchool Create Download Definition for ALL specified tables.
 
-Example:
-$tables = @('REG','REG_ACADEMIC','REG_BUILDING','REG_BUILDING_GRADE','REG_CALENDAR','REG_CONTACT','REG_CONTACT_PHONE','REG_ENTRY_WITH','REG_ETHNICITY','REG_NOTES','REG_PERSONAL','REG_PROGRAMS','REG_ROOM','REG_STAFF','REG_STAFF_ADDRESS','REG_STAFF_BLDGS','REG_STU_CONTACT','REG_USER',,'REGTB_HOUSE_TEAM')
-#No SQL Filtering
-.\CreateDownloadDefinitions.ps1 -username 0403cmillsap -DefinitionName "RGALL"
-#Modifications in the last 12 hours.
-.\CreateDownloadDefinitions.ps1 -username 0403cmillsap -DefinitionName "RG12H" -SQL 'WHERE CONVERT(DATETIME,CHANGE_DATE_TIME,101) >= DateAdd(Hour, DateDiff(Hour, 0, GetDate())-12, 0)'
-#Modifications in the last 48 hours.
-.\CreateDownloadDefinitions.ps1 -username 0403cmillsap -DefinitionName "RG48H" -SQL 'WHERE CONVERT(DATETIME,CHANGE_DATE_TIME,101) >= DateAdd(Hour, DateDiff(Hour, 0, GetDate())-48, 0)'
+    eSchool Data Exports
+    Author: Craig Millsap
 
--SQL 'WHERE SCHOOL_YEAR = (SELECT CASE WHEN MONTH(GetDate()) > 6 THEN YEAR(GetDate()) + 1 ELSE YEAR(GetDate()) END)'
+    This project is used to create download definitions for eSchool Tables automatically.
+
+    You must specify what tables you want to create the download definition for in advance OR specify them in the settings.ps1 file.
+
+    Table names are in the resources folder.
+
+    Example of defining your tables:
+    $tables = @('REG','REG_ACADEMIC','REG_CONTACT','REG_STU_CONTACT','REG_CONTACT_PHONE','REGTB_HOUSE_TEAM')
+
+    No SQL Filtering
+    .\CreateDownloadDefinitions.ps1 -username 0403cmillsap -DefinitionName "RGALL"
+
+    #Modifications in the last 12 hours.
+
+    .\CreateDownloadDefinitions.ps1 -username 0403cmillsap -DefinitionName "RG12H" -SQL 'WHERE CONVERT(DATETIME,CHANGE_DATE_TIME,101) >= DateAdd(Hour, DateDiff(Hour, 0, GetDate())-12, 0)'
+
+    #Modifications in the last 48 hours.
+    .\CreateDownloadDefinitions.ps1 -username 0403cmillsap -DefinitionName "RG48H" -SQL 'WHERE CONVERT(DATETIME,CHANGE_DATE_TIME,101) >= DateAdd(Hour, DateDiff(Hour, 0, GetDate())-48, 0)'
 
 #>
 
@@ -43,7 +53,7 @@ if ($SQL) {
     $sqlspecified = $True
 }
 
-$tables_with_years = Import-CSV ".\info\eSchool Columns with SCHOOL_YEAR.csv" | Select-Object -ExpandProperty tblName
+$tables_with_years = Import-CSV "$PSScriptRoot\resources\eSchool Tables with SCHOOL_YEAR.csv" | Select-Object -ExpandProperty tblName
 
 #dd = download definition
 $ddhash = @{}
@@ -68,7 +78,7 @@ $ddhash["UploadDownloadDefinition"]["InterfaceHeaders"] = @()
 
 $headerorder = 0
 $tblShortNamesArray = @()
-Import-Csv $PSScriptRoot\info\eSchoolDatabase.csv | Where-Object { $tables -contains $PSItem.tblName } | Group-Object -Property tblName | ForEach-Object {
+Import-Csv $PSScriptRoot\resources\eSchoolDatabase.csv | Where-Object { $tables -contains $PSItem.tblName } | Group-Object -Property tblName | ForEach-Object {
     $tblName = $PSItem.Name
     $sql_table = $SQL #pull from global variable so we can modify local variable without pulling it back into the loop.
 
@@ -124,7 +134,7 @@ Import-Csv $PSScriptRoot\info\eSchoolDatabase.csv | Where-Object { $tables -cont
         "Description" = "$description"
         "FileName" = "$filename"
         "LastRunDate" = $null
-        "DelimitChar" = '|'
+        "DelimitChar" = 'Q'
         "UseChangeFlag" = $False
         "TableAffected" = "$($tblName.ToLower())"
         "AdditionalSql" = $sql_table
@@ -189,8 +199,10 @@ if (($checkIfExists.InputFields | Where-Object { $PSItem.name -eq 'UploadDownloa
     if ($response3.PageState -eq 1) {
         Write-Host "Error: " -ForegroundColor RED
         $($response3.ValidationErrorMessages)
+    } else {
+        Write-Host "Info: Download definition created successfully. You can review it here: https://eschool20.esp.k12.ar.us/eSchoolPLUS20/Utility/UploadDownload?interfaceId=$($DefinitionName)"
     }
 } else {
-    Write-Host "Info: Job already exists. You need to delete the job at https://eschool20.esp.k12.ar.us/eSchoolPLUS20/Utility/UploadDownload?interfaceId=$($DefinitionName)"
+    Write-Host "Info: Job already exists. You need to delete the $($DefinitionName) Download Definition here: https://eschool20.esp.k12.ar.us/eSchoolPLUS20/Utility/UploadDownloadSearch" -ForegroundColor Red
 }
 

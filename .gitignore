@@ -1,5 +1,8 @@
-data\*.csv
+data/*.csv
 *.csv
 settings.ps1
 notes.txt
-!/info/*
+!/resources/*
+CreateDownloadDefinitions.ps1
+Import2Database.ps1
+/temp/*
